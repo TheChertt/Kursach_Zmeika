@@ -1,0 +1,120 @@
+*{
+   margin: 0;
+   padding: 0;
+   box-sizing: border-box;
+}
+body, html {
+   height: 100%;
+   font-family: Arial, sans-serif;
+   background: #111;
+   color: #fff;
+}
+#gameContainer {
+   display: flex;
+   flex-direction: column;
+   justify-content: center;
+   align-items: center;
+   padding-top: 20px;
+}
+#score {
+   font-size: 30px;
+   margin: 10px 0;
+}
+#restart {
+   font-size: 20px;
+   padding: 6px 12px;
+   border: 2px solid lime;
+   border-radius: 10px;
+   background: transparent;
+   color: #fff;
+   cursor: pointer;
+}
+
+.overlay {
+   position: fixed;
+   inset: 0;
+   display: flex;
+   justify-content: center;
+   align-items: center;
+   background: rgba(0,0,0,0.7);
+   z-index: 10;
+}
+.hidden {
+   display: none;
+}
+.menuBox, .shopBox {
+   background: #222;
+   padding: 24px;
+   border-radius: 12px;
+   min-width: 320px;
+   text-align: center;
+   box-shadow: 0 6px 20px rgba(0,0,0,0.6);
+}
+.menuBox h1 {
+   margin-bottom: 18px;
+   font-size: 36px;
+}
+.menuBtn {
+   display: inline-block;
+   margin: 8px;
+   padding: 10px 18px;
+   font-size: 18px;
+   border-radius: 8px;
+   border: none;
+   cursor: pointer;
+   background: #4caf50;
+   color: #fff;
+}
+.menuBtn:hover { opacity: 0.9; }
+
+.skinsList {
+   display: flex;
+   flex-wrap: wrap;
+   gap: 12px;
+   justify-content: center;
+   margin: 12px 0;
+}
+.skinCard {
+   width: 120px;
+   background: #333;
+   padding: 10px;
+   border-radius: 8px;
+   text-align: center;
+   color: #fff;
+   box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+.skinPreview {
+   width: 80px;
+   height: 20px;
+   margin: 6px auto;
+   border-radius: 4px;
+   border: 2px solid rgba(255,255,255,0.1);
+}
+.skinName {
+   margin-top: 6px;
+   font-size: 14px;
+}
+.skinPrice {
+   margin-top: 6px;
+   font-size: 13px;
+}
+.skinBtn {
+   margin-top: 8px;
+   padding: 6px 8px;
+   font-size: 13px;
+   border-radius: 6px;
+   border: none;
+   cursor: pointer;
+   background: #1976d2;
+   color: #fff;
+}
+.skinBtn.owned {
+   background: #ff9800;
+}
+.skinBtn.equipped {
+   background: #ffd700;
+   color: #000;
+}
+.shopControls {
+   margin-top: 10px;
+}

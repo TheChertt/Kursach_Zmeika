@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="stylesheet" href="./style.css" />
+    <title>Zmeika</title>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameField" width="600" height="600"></canvas>
+        <p id="score">0</p>
+        <button id="restart">Заново</button>
+    </div>
+
+    <div id="mainMenu" class="overlay">
+        <div class="menuBox">
+            <h1>Zmeika</h1>
+            <button id="playBtn" class="menuBtn">Играть</button>
+            <button id="shopBtn" class="menuBtn">Магазин</button>
+        </div>
+    </div>
+
+    <div id="shop" class="overlay hidden">
+        <div class="shopBox">
+            <h2>Магазин скинов</h2>
+            <p>Монеты: <span id="coins">0</span></p>
+            <div id="skinsList" class="skinsList"></div>
+            <div class="shopControls">
+                <button id="backToMenu" class="menuBtn">Назад</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="./snake.js"></script>
+</body>
+</html>
