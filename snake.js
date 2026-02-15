@@ -13,12 +13,19 @@ const skinsList = document.getElementById("skinsList");
 
 const context = gameField.getContext("2d");
 
-const boardColor = "black";
-const foodColor = "crimson";
+const boardColor = "ForestGreen";
+const foodColor = "OrangeRed";
 
 const boardWidth = gameField.width;
 const boardHeight = gameField.height;
 const cellSize = 30;
+
+const SNAKE_SPEED = 180;
+
+const STEP_TIME = cellSize / SNAKE_SPEED;
+
+let lastTime = 0;
+let accumulator = 0;
 
 const initialSnake = [
     { x: cellSize * 2, y: 0 },
@@ -28,11 +35,15 @@ const initialSnake = [
 
 let snake = JSON.parse(JSON.stringify(initialSnake));
 let snakeHead = { x: snake[0].x, y: snake[0].y };
+let prevSnakeHead = { x: snake[0].x, y: snake[0].y };
+
 const food = { x: 0, y: 0 };
 const velocity = { x: cellSize, y: 0 };
+let nextVelocity = { x: cellSize, y: 0 };
 
 let score = 0;
-let interval = null;
+let directionChanged = false;
+let gameRunning = false;
 
 const SKINS_KEY = "zmeika_skins";
 const COINS_KEY = "zmeika_coins";
@@ -40,14 +51,19 @@ const EQUIPPED_KEY = "zmeika_equipped";
 
 const skins = [
     { id: "default", name: "Бирюзовый", color: "cyan", price: 0 },
-    { id: "green", name: "Зелёный", color: "green", price: 50 },
-    { id: "purple", name: "Фиолетовый", color: "purple", price: 50 },
-    { id: "orange", name: "Оранжевый", color: "orange", price: 50 },
-    { id: "blue", name: "Синий", color: "blue", price: 50 },
+    { id: "green", name: "Зелёный", color: "green", price: 25 },
+    { id: "SpringGreen", name: "Мятно-зелёный", color: "SpringGreen", price: 50 },
+    { id: "purple", name: "Фиолетовый", color: "purple", price: 25 },
+    { id: "Indigo", name: "Индиго", color: "Indigo", price: 50 },
+    { id: "blue", name: "Синий", color: "blue", price: 25 },
+    { id: "Navy", name: "Морской", color: "Navy", price: 50 },
+    { id: "White", name: "Белый", color: "White", price: 75 },
+    { id: "Black", name: "Черный", color: "Black", price: 75 },
+    { id: "Magenta", name: "Poзовый", color: "Magenta", price: 100 },
     { id: "gold", name: "Золотой", color: "gold", price: 150 },
 ];
 
-let ownedSkins = {}; 
+let ownedSkins = {};
 let coins = 0;
 let equippedSkin = "default";
 
@@ -56,20 +72,16 @@ function loadShopState() {
     const savedCoins = localStorage.getItem(COINS_KEY);
     const savedEquipped = localStorage.getItem(EQUIPPED_KEY);
 
-    if (savedOwned) {
-        try { ownedSkins = JSON.parse(savedOwned); } catch { ownedSkins = {}; }
-    } else {
-        ownedSkins = { default: true };
-    }
-
-    coins = savedCoins ? parseInt(savedCoins, 10) || 0 : 0;
+    ownedSkins = savedOwned ? JSON.parse(savedOwned) : { default: true };
+    coins = savedCoins ? parseInt(savedCoins) : 0;
     equippedSkin = savedEquipped || "default";
+
     updateCoinsUI();
 }
 
 function saveShopState() {
     localStorage.setItem(SKINS_KEY, JSON.stringify(ownedSkins));
-    localStorage.setItem(COINS_KEY, String(coins));
+    localStorage.setItem(COINS_KEY, coins);
     localStorage.setItem(EQUIPPED_KEY, equippedSkin);
 }
 
@@ -78,8 +90,7 @@ function updateCoinsUI() {
 }
 
 function getCurrentSnakeColor() {
-    const skin = skins.find(s => s.id === equippedSkin);
-    return skin ? skin.color : "cyan";
+    return skins.find(s => s.id === equippedSkin).color;
 }
 
 function drawBoard() {
@@ -87,19 +98,22 @@ function drawBoard() {
     context.fillRect(0, 0, boardWidth, boardHeight);
 }
 
-function drawSnake() {
-    const snakeColor = getCurrentSnakeColor();
-    for(let index = 0; index < snake.length; index++) {
-        const snakePart = snake[index];
-        if(
-            index !== 0 &&
-            snakePart.x === snakeHead.x &&
-            snakePart.y === snakeHead.y
-        ) {
-            return finishGame();
+function drawSnake(alpha) {
+    const color = getCurrentSnakeColor();
+
+    for (let i = 0; i < snake.length; i++) {
+        const part = snake[i];
+
+        let x = part.x;
+        let y = part.y;
+
+        if (i === 0) {
+            x = prevSnakeHead.x + (snakeHead.x - prevSnakeHead.x) * alpha;
+            y = prevSnakeHead.y + (snakeHead.y - prevSnakeHead.y) * alpha;
         }
-        context.fillStyle = snakeColor;
-        context.fillRect(snakePart.x, snakePart.y, cellSize, cellSize);
+
+        context.fillStyle = color;
+        context.fillRect(x, y, cellSize, cellSize);
     }
 }
 
@@ -117,8 +131,9 @@ function placeFood() {
     do {
         x = getRandomCoords();
         y = getRandomCoords();
-        collision = snake.some(part => part.x === x && part.y === y);
+        collision = snake.some(p => p.x === x && p.y === y);
     } while (collision);
+
     food.x = x;
     food.y = y;
 }
@@ -129,111 +144,137 @@ function updateScore(newScore) {
 }
 
 function checkIfEat() {
-    if(snakeHead.x === food.x && snakeHead.y === food.y) {
-        placeFood();
-        updateScore(score + 1);
-        return true;
-    }
-    return false;
+    return snakeHead.x === food.x && snakeHead.y === food.y;
 }
 
-function move() {
+function applyNextDirection() {
+    velocity.x = nextVelocity.x;
+    velocity.y = nextVelocity.y;
+}
+
+function moveOneCell() {
+    prevSnakeHead = { x: snakeHead.x, y: snakeHead.y };
+
+    applyNextDirection();
+
     snakeHead.x += velocity.x;
     snakeHead.y += velocity.y;
 
-    if(snakeHead.x < 0) {
-        snakeHead.x = boardWidth - cellSize;
-    } else if(snakeHead.x > boardWidth - cellSize) {
-        snakeHead.x = 0;
-    } else if(snakeHead.y < 0) {
-        snakeHead.y = boardHeight - cellSize;
-    } else if(snakeHead.y > boardHeight - cellSize) {
-        snakeHead.y = 0;
-    }
-    snake.unshift({
-        x: snakeHead.x,
-        y: snakeHead.y,
-    });
-    if(!checkIfEat()) {
+    if (snakeHead.x < 0) snakeHead.x = boardWidth - cellSize;
+    else if (snakeHead.x >= boardWidth) snakeHead.x = 0;
+
+    if (snakeHead.y < 0) snakeHead.y = boardHeight - cellSize;
+    else if (snakeHead.y >= boardHeight) snakeHead.y = 0;
+
+    snake.unshift({ x: snakeHead.x, y: snakeHead.y });
+
+    if (checkIfEat()) {
+        updateScore(score + 1);
+        placeFood();
+    } else {
         snake.pop();
+    }
+
+    directionChanged = false;
+
+    for (let i = 1; i < snake.length; i++) {
+        if (snake[i].x === snakeHead.x && snake[i].y === snakeHead.y) {
+            finishGame();
+            return;
+        }
     }
 }
 
 function changeDirection(ev) {
-    const isGoingRight = velocity.x > 0;
-    const isGoingLeft = velocity.x < 0;
-    const isGoingUp = velocity.y < 0;
-    const isGoingDown = velocity.y > 0;
+    if (directionChanged) return;
 
-    if(ev.key === "ArrowRight" && !isGoingLeft) {
-        velocity.x = cellSize;
-        velocity.y = 0;
-    } else if(ev.key === "ArrowLeft" && !isGoingRight) {
-        velocity.x = -cellSize;
-        velocity.y = 0;
-    } else if(ev.key === "ArrowUp" && !isGoingDown) {
-        velocity.x = 0;
-        velocity.y = -cellSize;
-    } else if(ev.key === "ArrowDown" && !isGoingUp) {
-        velocity.x = 0;
-        velocity.y = cellSize;
+    const key = ev.key;
+
+    const isRight = velocity.x > 0;
+    const isLeft = velocity.x < 0;
+    const isUp = velocity.y < 0;
+    const isDown = velocity.y > 0;
+
+    if (key === "ArrowRight" && !isLeft) {
+        nextVelocity = { x: cellSize, y: 0 };
+        directionChanged = true;
+    } else if (key === "ArrowLeft" && !isRight) {
+        nextVelocity = { x: -cellSize, y: 0 };
+        directionChanged = true;
+    } else if (key === "ArrowUp" && !isDown) {
+        nextVelocity = { x: 0, y: -cellSize };
+        directionChanged = true;
+    } else if (key === "ArrowDown" && !isUp) {
+        nextVelocity = { x: 0, y: cellSize };
+        directionChanged = true;
     }
 }
 
-function nextTick() {
+function gameLoop(timestamp) {
+    if (!gameRunning) return;
+
+    const delta = (timestamp - lastTime) / 1000;
+    lastTime = timestamp;
+
+    accumulator += delta;
+
+    while (accumulator >= STEP_TIME) {
+        moveOneCell();
+        accumulator -= STEP_TIME;
+    }
+
+    const alpha = accumulator / STEP_TIME;
+
     drawBoard();
     drawFood();
-    drawSnake();
-    move();
+    drawSnake(alpha);
+
+    requestAnimationFrame(gameLoop);
 }
 
 function finishGame() {
+    gameRunning = false;
+
     coins += score;
     saveShopState();
     updateCoinsUI();
 
-    context.clearRect(0, 0, boardWidth, boardHeight);
-    clearInterval(interval);
-    interval = null;
     context.fillStyle = "red";
     context.font = "40px cursive";
-    context.fillText("Вы проиграли =(", 160, 260);
-    context.font = "20px Arial";
-    context.fillStyle = "#fff";
-    context.fillText(`Заработано монет: ${score}`, 140, 300);
+    context.fillText("Game Over!", 200, 260);
 
-    setTimeout(() => {
-        showMainMenu();
-    }, 1200);
+    setTimeout(showMainMenu, 1200);
 }
 
 function startGame() {
     snake = JSON.parse(JSON.stringify(initialSnake));
     snakeHead = { x: snake[0].x, y: snake[0].y };
+    prevSnakeHead = { ...snakeHead };
+
     velocity.x = cellSize;
     velocity.y = 0;
+    nextVelocity = { ...velocity };
+
     updateScore(0);
     placeFood();
 
-    restartButton.style.display = "inline-block";
-    restartButton.removeEventListener("click", restartGame);
-    restartButton.addEventListener("click", restartGame);
+    directionChanged = false;
+    accumulator = 0;
+    lastTime = performance.now();
 
-    window.removeEventListener("keydown", changeDirection);
+    gameRunning = true;
+
     window.addEventListener("keydown", changeDirection);
 
-    if (interval) clearInterval(interval);
-    interval = setInterval(nextTick, 300);
+    requestAnimationFrame(gameLoop);
 }
 
 function restartGame() {
-    if (interval) {
-        clearInterval(interval);
-        interval = null;
-    }
+    gameRunning = false;
     startGame();
 }
 
+// Меню и магазин (без изменений)
 function showMainMenu() {
     mainMenu.classList.remove("hidden");
     shopOverlay.classList.add("hidden");
@@ -259,10 +300,7 @@ playBtn.addEventListener("click", () => {
     startGame();
 });
 
-shopBtn.addEventListener("click", () => {
-    showShop();
-});
-
+shopBtn.addEventListener("click", showShop);
 backToMenu.addEventListener("click", () => {
     hideShop();
     showMainMenu();
@@ -271,6 +309,7 @@ backToMenu.addEventListener("click", () => {
 function populateShop() {
     skinsList.innerHTML = "";
     updateCoinsUI();
+
     skins.forEach(skin => {
         const card = document.createElement("div");
         card.className = "skinCard";
@@ -285,25 +324,22 @@ function populateShop() {
 
         const price = document.createElement("div");
         price.className = "skinPrice";
-        price.textContent = skin.price > 0 ? `${skin.price} очков` : "Бесплатно";
+        price.textContent = skin.price ? `${skin.price} очков` : "Бесплатно";
 
         const btn = document.createElement("button");
         btn.className = "skinBtn";
 
-        const owned = !!ownedSkins[skin.id];
-        const isEquipped = equippedSkin === skin.id;
+        const owned = ownedSkins[skin.id];
+        const equipped = equippedSkin === skin.id;
 
-        if (isEquipped) {
+        if (equipped) {
             btn.textContent = "Экипировано";
             btn.classList.add("equipped");
-            btn.disabled = false;
         } else if (owned) {
             btn.textContent = "Экипировать";
             btn.classList.add("owned");
-            btn.disabled = false;
         } else {
             btn.textContent = `Купить (${skin.price})`;
-            btn.disabled = false;
         }
 
         btn.addEventListener("click", () => {
@@ -315,20 +351,16 @@ function populateShop() {
                 if (coins >= skin.price) {
                     coins -= skin.price;
                     ownedSkins[skin.id] = true;
-                    equippedSkin = skin.id; 
+                    equippedSkin = skin.id;
                     saveShopState();
-                    updateCoinsUI();
                     populateShop();
                 } else {
-                    alert("Недостаточно монет для покупки");
+                    alert("Недостаточно монет");
                 }
             }
         });
 
-        card.appendChild(preview);
-        card.appendChild(name);
-        card.appendChild(price);
-        card.appendChild(btn);
+        card.append(preview, name, price, btn);
         skinsList.appendChild(card);
     });
 }
