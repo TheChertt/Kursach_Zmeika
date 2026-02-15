@@ -59,7 +59,7 @@ const skins = [
     { id: "Navy", name: "Морской", color: "Navy", price: 50 },
     { id: "White", name: "Белый", color: "White", price: 75 },
     { id: "Black", name: "Черный", color: "Black", price: 75 },
-    { id: "Magenta", name: "Poзовый", color: "Magenta", price: 100 },
+    { id: "Magenta", name: "Магента", color: "Magenta", price: 100 },
     { id: "gold", name: "Золотой", color: "gold", price: 150 },
 ];
 
@@ -274,7 +274,6 @@ function restartGame() {
     startGame();
 }
 
-// Меню и магазин (без изменений)
 function showMainMenu() {
     mainMenu.classList.remove("hidden");
     shopOverlay.classList.add("hidden");
