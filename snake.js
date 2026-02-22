@@ -21,7 +21,6 @@ const boardHeight = gameField.height;
 const cellSize = 30;
 
 const SNAKE_SPEED = 180;
-
 const STEP_TIME = cellSize / SNAKE_SPEED;
 
 let lastTime = 0;
@@ -35,7 +34,8 @@ const initialSnake = [
 
 let snake = JSON.parse(JSON.stringify(initialSnake));
 let snakeHead = { x: snake[0].x, y: snake[0].y };
-let prevSnakeHead = { x: snake[0].x, y: snake[0].y };
+
+let prevSnake = []; // ← добавлено
 
 const food = { x: 0, y: 0 };
 const velocity = { x: cellSize, y: 0 };
@@ -102,20 +102,33 @@ function drawSnake(alpha) {
     const color = getCurrentSnakeColor();
 
     for (let i = 0; i < snake.length; i++) {
-        const part = snake[i];
+        const newPos = snake[i];
+        const oldPos = prevSnake[i] || newPos;
 
-        let x = part.x;
-        let y = part.y;
+        let dx = newPos.x - oldPos.x;
+        let dy = newPos.y - oldPos.y;
 
-        if (i === 0) {
-            x = prevSnakeHead.x + (snakeHead.x - prevSnakeHead.x) * alpha;
-            y = prevSnakeHead.y + (snakeHead.y - prevSnakeHead.y) * alpha;
+        // Проверяем телепорт (скачок больше чем на 1 клетку)
+        const teleported =
+            Math.abs(dx) > cellSize || Math.abs(dy) > cellSize;
+
+        let x, y;
+
+        if (teleported) {
+            // Телепорт → рисуем сразу в новой позиции
+            x = newPos.x;
+            y = newPos.y;
+        } else {
+            // Обычное движение → плавная интерполяция
+            x = oldPos.x + dx * alpha;
+            y = oldPos.y + dy * alpha;
         }
 
         context.fillStyle = color;
         context.fillRect(x, y, cellSize, cellSize);
     }
 }
+
 
 function drawFood() {
     context.fillStyle = foodColor;
@@ -144,7 +157,7 @@ function updateScore(newScore) {
 }
 
 function checkIfEat() {
-    return snakeHead.x === food.x && snakeHead.y === food.y;
+    return snake[0].x === food.x && snake[0].y === food.y;
 }
 
 function applyNextDirection() {
@@ -153,20 +166,22 @@ function applyNextDirection() {
 }
 
 function moveOneCell() {
-    prevSnakeHead = { x: snakeHead.x, y: snakeHead.y };
+    prevSnake = snake.map(p => ({ x: p.x, y: p.y })); // ← сохраняем старые позиции
 
     applyNextDirection();
 
-    snakeHead.x += velocity.x;
-    snakeHead.y += velocity.y;
+    const newHead = {
+        x: snake[0].x + velocity.x,
+        y: snake[0].y + velocity.y
+    };
 
-    if (snakeHead.x < 0) snakeHead.x = boardWidth - cellSize;
-    else if (snakeHead.x >= boardWidth) snakeHead.x = 0;
+    if (newHead.x < 0) newHead.x = boardWidth - cellSize;
+    else if (newHead.x >= boardWidth) newHead.x = 0;
 
-    if (snakeHead.y < 0) snakeHead.y = boardHeight - cellSize;
-    else if (snakeHead.y >= boardHeight) snakeHead.y = 0;
+    if (newHead.y < 0) newHead.y = boardHeight - cellSize;
+    else if (newHead.y >= boardHeight) newHead.y = 0;
 
-    snake.unshift({ x: snakeHead.x, y: snakeHead.y });
+    snake.unshift(newHead);
 
     if (checkIfEat()) {
         updateScore(score + 1);
@@ -178,7 +193,7 @@ function moveOneCell() {
     directionChanged = false;
 
     for (let i = 1; i < snake.length; i++) {
-        if (snake[i].x === snakeHead.x && snake[i].y === snakeHead.y) {
+        if (snake[i].x === newHead.x && snake[i].y === newHead.y) {
             finishGame();
             return;
         }
@@ -249,7 +264,8 @@ function finishGame() {
 function startGame() {
     snake = JSON.parse(JSON.stringify(initialSnake));
     snakeHead = { x: snake[0].x, y: snake[0].y };
-    prevSnakeHead = { ...snakeHead };
+
+    prevSnake = snake.map(p => ({ x: p.x, y: p.y }));
 
     velocity.x = cellSize;
     velocity.y = 0;
