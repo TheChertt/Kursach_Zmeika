@@ -35,7 +35,7 @@ const initialSnake = [
 let snake = JSON.parse(JSON.stringify(initialSnake));
 let snakeHead = { x: snake[0].x, y: snake[0].y };
 
-let prevSnake = []; // ← добавлено
+let prevSnake = []; 
 
 const food = { x: 0, y: 0 };
 const velocity = { x: cellSize, y: 0 };
@@ -108,18 +108,15 @@ function drawSnake(alpha) {
         let dx = newPos.x - oldPos.x;
         let dy = newPos.y - oldPos.y;
 
-        // Проверяем телепорт (скачок больше чем на 1 клетку)
         const teleported =
             Math.abs(dx) > cellSize || Math.abs(dy) > cellSize;
 
         let x, y;
 
         if (teleported) {
-            // Телепорт → рисуем сразу в новой позиции
             x = newPos.x;
             y = newPos.y;
         } else {
-            // Обычное движение → плавная интерполяция
             x = oldPos.x + dx * alpha;
             y = oldPos.y + dy * alpha;
         }
@@ -166,7 +163,7 @@ function applyNextDirection() {
 }
 
 function moveOneCell() {
-    prevSnake = snake.map(p => ({ x: p.x, y: p.y })); // ← сохраняем старые позиции
+    prevSnake = snake.map(p => ({ x: p.x, y: p.y })); 
 
     applyNextDirection();
 
