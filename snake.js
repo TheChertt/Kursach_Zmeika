@@ -14,7 +14,7 @@ const skinsList = document.getElementById("skinsList");
 const context = gameField.getContext("2d");
 
 const boardColor = "ForestGreen";
-const foodColor = "OrangeRed";
+const foodColor = "Yellow";
 
 const boardWidth = gameField.width;
 const boardHeight = gameField.height;
@@ -49,19 +49,12 @@ const SKINS_KEY = "zmeika_skins";
 const COINS_KEY = "zmeika_coins";
 const EQUIPPED_KEY = "zmeika_equipped";
 
-const skins = [
-    { id: "default", name: "Бирюзовый", color: "cyan", price: 0 },
-    { id: "green", name: "Зелёный", color: "green", price: 25 },
-    { id: "SpringGreen", name: "Мятно-зелёный", color: "SpringGreen", price: 50 },
-    { id: "purple", name: "Фиолетовый", color: "purple", price: 25 },
-    { id: "Indigo", name: "Индиго", color: "Indigo", price: 50 },
-    { id: "blue", name: "Синий", color: "blue", price: 25 },
-    { id: "Navy", name: "Морской", color: "Navy", price: 50 },
-    { id: "White", name: "Белый", color: "White", price: 75 },
-    { id: "Black", name: "Черный", color: "Black", price: 75 },
-    { id: "Magenta", name: "Магента", color: "Magenta", price: 100 },
-    { id: "gold", name: "Золотой", color: "gold", price: 150 },
-];
+let skins = [];
+
+fetch("skins.json")
+    .then(r => r.json())
+    .then(data => skins = data);
+
 
 let ownedSkins = {};
 let coins = 0;
@@ -98,8 +91,21 @@ function drawBoard() {
     context.fillRect(0, 0, boardWidth, boardHeight);
 }
 
+let snakeTexture = null;
+
+function loadSkinAssets() {
+    const skin = skins.find(s => s.id === equippedSkin);
+
+    if (skin.type === "texture" || skin.texture) {
+        snakeTexture = new Image();
+        snakeTexture.src = skin.texture;
+    } else {
+        snakeTexture = null;
+    }
+}
+
 function drawSnake(alpha) {
-    const color = getCurrentSnakeColor();
+    const skin = skins.find(s => s.id === equippedSkin);
 
     for (let i = 0; i < snake.length; i++) {
         const newPos = snake[i];
@@ -108,20 +114,85 @@ function drawSnake(alpha) {
         let dx = newPos.x - oldPos.x;
         let dy = newPos.y - oldPos.y;
 
-        const teleported =
-            Math.abs(dx) > cellSize || Math.abs(dy) > cellSize;
+        const teleported = Math.abs(dx) > cellSize || Math.abs(dy) > cellSize;
 
-        let x, y;
+        let x = teleported ? newPos.x : oldPos.x + dx * alpha;
+        let y = teleported ? newPos.y : oldPos.y + dy * alpha;
 
-        if (teleported) {
-            x = newPos.x;
-            y = newPos.y;
-        } else {
-            x = oldPos.x + dx * alpha;
-            y = oldPos.y + dy * alpha;
+       if (skin.type === "texture" && snakeTexture) {
+    let dirX = 0, dirY = 0;
+
+    if (i === 0) {
+        dirX = velocity.x;
+        dirY = velocity.y;
+    } else {
+        dirX = snake[i - 1].x - newPos.x;
+        dirY = snake[i - 1].y - newPos.y;
+    }
+
+    let angle = 0;
+    if (dirX > 0) angle = 0;            
+    else if (dirX < 0) angle = Math.PI; 
+    else if (dirY > 0) angle = Math.PI / 2; 
+    else if (dirY < 0) angle = -Math.PI / 2; 
+
+    context.save();
+    context.translate(x + cellSize / 2, y + cellSize / 2);
+    context.rotate(angle);
+
+    context.drawImage(
+        snakeTexture,
+        -cellSize / 2,
+        -cellSize / 2,
+        cellSize,
+        cellSize
+    );
+
+    context.restore();
+    continue;
+}
+
+        if (skin.type === "shape") {
+            context.fillStyle = skin.color;
+
+             {
+
+                context.beginPath();
+                for (let a = 0; a < 6; a++) {
+                    const angle = Math.PI / 3 * a;
+                    const px = cx + r * Math.cos(angle);
+                    const py = cy + r * Math.sin(angle);
+                    if (a === 0) context.moveTo(px, py);
+                    else context.lineTo(px, py);
+                }
+                context.closePath();
+                context.fill();
+                continue;
+            }
         }
 
-        context.fillStyle = color;
+     if (skin.type === "animated") {
+        
+    if (skin.effect === "rgbCycle") {
+        const t = performance.now() / 500;
+
+        const r = Math.floor((Math.sin(t) + 1) * 127);
+        const g = Math.floor((Math.sin(t + 2) + 1) * 127);
+        const b = Math.floor((Math.sin(t + 4) + 1) * 127);
+
+        context.fillStyle = `rgb(${r}, ${g}, ${b})`;
+    } else if (skin.effect === "pulse") {
+        const t = performance.now() / 200;
+        const pulse = Math.sin(t) * 40 + 215;
+        context.fillStyle = `rgb(${pulse}, ${pulse}, 255)`;
+    } else {
+        context.fillStyle = skin.color;
+    }
+}
+ else {
+            context.fillStyle = skin.color;
+        }
+
         context.fillRect(x, y, cellSize, cellSize);
     }
 }
@@ -260,6 +331,7 @@ function finishGame() {
 
 function startGame() {
     snake = JSON.parse(JSON.stringify(initialSnake));
+    loadSkinAssets();
     snakeHead = { x: snake[0].x, y: snake[0].y };
 
     prevSnake = snake.map(p => ({ x: p.x, y: p.y }));
@@ -358,6 +430,7 @@ function populateShop() {
             if (owned) {
                 equippedSkin = skin.id;
                 saveShopState();
+                loadSkinAssets();
                 populateShop();
             } else {
                 if (coins >= skin.price) {

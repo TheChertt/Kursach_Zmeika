@@ -1,0 +1,101 @@
+[
+  {
+    "id": "default",
+    "name": "Бирюзовый",
+    "type": "color",
+    "color": "cyan",
+    "price": 0
+  },
+  {
+    "id": "R34",
+    "name": "R34",
+    "type": "color",
+    "color": "SpringGreen",
+    "price": 25
+  },
+
+  {
+    "id": "Violet",
+    "name": "Фиолетовый",
+    "type": "color",
+    "color": "MediumVioletRed",
+    "price": 25
+  },
+
+  {
+    "id": "Gold",
+    "name": "Золотой",
+    "type": "color",
+    "color": "Gold",
+    "price": 25
+  },
+
+  {
+    "id": "DarkBlue",
+    "name": "Синий",
+    "type": "color",
+    "color": "DarkBlue",
+    "price": 25
+  },
+
+  {
+    "id": "Abibas",
+    "name": "Три Полоски",
+    "color": "Black",
+    "type": "texture",
+    "texture": "textures/Abibas.png",
+    "price": 50
+  },
+
+{
+    "id": "TNT",
+    "name": "Динамит",
+    "color": "Crimson",
+    "type": "texture",
+    "texture": "textures/TNT.png",
+    "price": 50
+  },
+
+  {
+    "id": "Brick",
+    "name": "Серый Кирпич",
+    "color": "Gray",
+    "type": "texture",
+    "texture": "textures/Brick.png",
+    "price": 50
+  },
+  {
+    "id": "PC",
+    "name": "Компьютер",
+    "color": "Gray",
+    "type": "texture",
+    "texture": "textures/PC.png",
+    "price": 100
+  },
+  {
+    "id": "Arrow",
+    "name": "Стрелка",
+    "color": "Black",
+    "type": "texture",
+    "texture": "textures/Arrow3.png",
+    "price": 100
+  },
+   
+  {
+    "id": "ghost",
+    "name": "Призрачная",
+    "type": "animated",
+    "color": "rgba(255,255,255,0.5)",
+    "effect": "fadeTrail",
+    "price": 100
+  },
+
+  {
+  "id": "RGB",
+  "name": "RGB(+100_к_ФПС)",
+  "type": "animated",
+  "color": "Red",
+  "effect": "rgbCycle",
+  "price": 150
+}
+]
